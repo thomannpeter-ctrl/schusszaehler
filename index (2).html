@@ -1,0 +1,166 @@
+<!DOCTYPE html> 
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schusszähler</title>
+
+<style>
+body{margin:0;padding:16px;background:#c9b8a6;font-family:Arial}
+.container{max-width:480px;margin:auto;background:#f1e8dd;padding:18px;border-radius:14px}
+label{font-weight:bold;margin-top:14px;display:block}
+input,select,button{
+  width:100%;
+  box-sizing:border-box;
+  padding:12px;
+  margin-top:8px;
+  border-radius:8px;
+  border:1px solid #b5a896;
+  font-size:16px
+}
+button{border:none;cursor:pointer}
+.primary{background:#2f6fb0;color:white}
+.secondary{background:#e3dbd1}
+.danger{background:#b7372a;color:white}
+.total{
+  margin:20px 0;
+  padding:18px;
+  background:white;
+  border-radius:12px;
+  text-align:center;
+  font-size:22px;
+  font-weight:bold
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>Schusszähler</h1>
+
+<label>Neues Sportgerät</label>
+<input id="geraetNeu" placeholder="z.B. Stgw 57">
+<button class="secondary" onclick="neuesGeraet()">Hinzufügen</button>
+
+<label>Sportgerät auswählen</label>
+<select id="geraetSelect" onchange="ladeGeraet()">
+<option value="">– auswählen –</option>
+</select>
+
+<label>Startsaldo</label>
+<input type="number" id="startsaldo" oninput="aktualisieren()">
+
+<label>Neuer Eintrag</label>
+<input type="number" id="neuerEintrag">
+<button class="primary" onclick="addEintrag()">Eintrag hinzufügen</button>
+
+<div class="total">
+Gesamt<br><span id="total">0</span>
+</div>
+
+<button class="secondary" onclick="laufwechsel()">Neuer Lauf</button>
+<button class="secondary" onclick="exportCSV()">Export CSV</button>
+<button class="secondary" onclick="exportJSON()">Export Daten</button>
+<button class="secondary" onclick="importJSON()">Import Daten</button>
+<button class="danger" onclick="geraetLoeschen()">Sportgerät löschen</button>
+
+<input type="file" id="fileInput" accept=".json" style="display:none">
+</div>
+
+<script>
+let daten = JSON.parse(localStorage.getItem("schusszaehler")) || {};
+let aktuellesGeraet = "";
+
+function speichern(){localStorage.setItem("schusszaehler",JSON.stringify(daten));}
+
+function ladeDropdown(){
+geraetSelect.innerHTML='<option value="">– auswählen –</option>';
+for(let g in daten){
+let o=document.createElement("option");
+o.value=g;o.text=g;geraetSelect.appendChild(o);
+}
+}
+
+function neuesGeraet(){
+let n=geraetNeu.value.trim();
+if(!n)return;
+daten[n]={startsaldo:0,eintraege:[]};
+geraetNeu.value="";speichern();ladeDropdown();
+geraetSelect.value=n;ladeGeraet();
+}
+
+function ladeGeraet(){
+aktuellesGeraet=geraetSelect.value;
+if(!aktuellesGeraet)return;
+startsaldo.value=daten[aktuellesGeraet].startsaldo;
+anzeigen();
+}
+
+function aktualisieren(){
+if(!aktuellesGeraet)return;
+daten[aktuellesGeraet].startsaldo=Number(startsaldo.value)||0;
+speichern();anzeigen();
+}
+
+function addEintrag(){
+if(!aktuellesGeraet)return;
+let w=Number(neuerEintrag.value);
+if(w<=0)return;
+daten[aktuellesGeraet].eintraege.push({menge:w});
+neuerEintrag.value="";speichern();anzeigen();
+}
+
+function anzeigen(){
+let t=daten[aktuellesGeraet].startsaldo;
+daten[aktuellesGeraet].eintraege.forEach(e=>t+=e.menge);
+total.innerText=t;
+}
+
+function laufwechsel(){
+if(!aktuellesGeraet||!confirm("Neuen Lauf starten?"))return;
+daten[aktuellesGeraet]={startsaldo:0,eintraege:[]};
+startsaldo.value=0;speichern();anzeigen();
+}
+
+function geraetLoeschen(){
+if(!aktuellesGeraet||!confirm("Sportgerät löschen?"))return;
+delete daten[aktuellesGeraet];
+aktuellesGeraet="";speichern();ladeDropdown();total.innerText="0";
+}
+
+function exportCSV(){
+if(!aktuellesGeraet)return;
+let csv="Menge\n";
+daten[aktuellesGeraet].eintraege.forEach(e=>csv+=e.menge+"\n");
+let a=document.createElement("a");
+a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+a.download="schussliste.csv";a.click();
+}
+
+function exportJSON(){
+let a=document.createElement("a");
+a.href=URL.createObjectURL(new Blob([JSON.stringify(daten,null,2)],{type:"application/json"}));
+a.download="schusszaehler_backup.json";a.click();
+}
+
+function importJSON(){
+fileInput.click();
+}
+
+fileInput.onchange=function(){
+let f=this.files[0];if(!f)return;
+let r=new FileReader();
+r.onload=e=>{
+try{
+daten=JSON.parse(e.target.result);
+speichern();ladeDropdown();
+alert("Import erfolgreich!");
+}catch{alert("Ungültige Datei!")}
+};
+r.readAsText(f);
+};
+
+window.onload=ladeDropdown;
+</script>
+</body>
+</html>
