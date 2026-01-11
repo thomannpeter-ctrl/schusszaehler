@@ -61,6 +61,7 @@ Gesamt<br><span id="total">0</span>
 <button class="secondary" onclick="laufwechsel()">Neuer Lauf</button>
 <button class="secondary" onclick="exportCSV()">Export CSV</button>
 <button class="secondary" onclick="exportJSON()">Export Daten</button>
+<button class="secondary" onclick="exportText()">Export als Text (iPhone)</button>
 <button class="secondary" onclick="importJSON()">Import Daten</button>
 <button class="danger" onclick="geraetLoeschen()">Sportgerät löschen</button>
 
@@ -70,6 +71,11 @@ Gesamt<br><span id="total">0</span>
 <script>
 let daten = JSON.parse(localStorage.getItem("schusszaehler")) || {};
 let aktuellesGeraet = "";
+
+if(!localStorage.getItem("backupHinweis")){
+  alert("Hinweis:\nVor Löschen von Browserdaten immer Export machen!\nAuf iPhone ggf. 'Export als Text' benutzen.");
+  localStorage.setItem("backupHinweis","1");
+}
 
 function speichern(){localStorage.setItem("schusszaehler",JSON.stringify(daten));}
 
@@ -141,6 +147,14 @@ function exportJSON(){
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([JSON.stringify(daten,null,2)],{type:"application/json"}));
 a.download="schusszaehler_backup.json";a.click();
+}
+
+function exportText(){
+  const txt = JSON.stringify(daten,null,2);
+  const w = window.open();
+  w.document.write("<pre>"+txt.replace(/</g,"&lt;")+"</pre>");
+  w.document.title = "Backup – kopieren";
+  alert("Alles markieren, kopieren und z.B. in Notizen oder Drive einfügen.");
 }
 
 function importJSON(){
