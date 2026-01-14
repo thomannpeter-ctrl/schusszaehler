@@ -64,89 +64,91 @@ Gesamt<br><span id="total">0</span>
 <button class="secondary" onclick="exportText()">Export als Text (iPhone)</button>
 <button class="secondary" onclick="importJSON()">Import Daten</button>
 <button class="danger" onclick="geraetLoeschen()">Sportgerät löschen</button>
-
-<input type="file" id="fileInput" accept=".json" style="display:none">
 </div>
 
 <script>
+/* Startwarnung wie bei Resultate-App */
+if(!localStorage.getItem("schusszaehlerWarnung")){
+  alert("⚠️ WICHTIG:\n\nDie Daten werden nur im Browser gespeichert.\nVor Löschen der Browserdaten unbedingt Export machen!");
+  localStorage.setItem("schusszaehlerWarnung","1");
+}
+
 let daten = JSON.parse(localStorage.getItem("schusszaehler")) || {};
 let aktuellesGeraet = "";
-
-if(!localStorage.getItem("backupHinweis")){
-  alert("Hinweis:\nVor Löschen von Browserdaten immer Export machen!\nAuf iPhone ggf. 'Export als Text' benutzen.");
-  localStorage.setItem("backupHinweis","1");
-}
 
 function speichern(){localStorage.setItem("schusszaehler",JSON.stringify(daten));}
 
 function ladeDropdown(){
-geraetSelect.innerHTML='<option value="">– auswählen –</option>';
-for(let g in daten){
-let o=document.createElement("option");
-o.value=g;o.text=g;geraetSelect.appendChild(o);
-}
+  geraetSelect.innerHTML='<option value="">– auswählen –</option>';
+  for(let g in daten){
+    let o=document.createElement("option");
+    o.value=g;o.text=g;geraetSelect.appendChild(o);
+  }
 }
 
 function neuesGeraet(){
-let n=geraetNeu.value.trim();
-if(!n)return;
-daten[n]={startsaldo:0,eintraege:[]};
-geraetNeu.value="";speichern();ladeDropdown();
-geraetSelect.value=n;ladeGeraet();
+  let n=geraetNeu.value.trim();
+  if(!n)return;
+  daten[n]={startsaldo:0,eintraege:[]};
+  geraetNeu.value="";speichern();ladeDropdown();
+  geraetSelect.value=n;ladeGeraet();
 }
 
 function ladeGeraet(){
-aktuellesGeraet=geraetSelect.value;
-if(!aktuellesGeraet)return;
-startsaldo.value=daten[aktuellesGeraet].startsaldo;
-anzeigen();
+  aktuellesGeraet=geraetSelect.value;
+  if(!aktuellesGeraet)return;
+  startsaldo.value=daten[aktuellesGeraet].startsaldo;
+  anzeigen();
 }
 
 function aktualisieren(){
-if(!aktuellesGeraet)return;
-daten[aktuellesGeraet].startsaldo=Number(startsaldo.value)||0;
-speichern();anzeigen();
+  if(!aktuellesGeraet)return;
+  daten[aktuellesGeraet].startsaldo=Number(startsaldo.value)||0;
+  speichern();anzeigen();
 }
 
 function addEintrag(){
-if(!aktuellesGeraet)return;
-let w=Number(neuerEintrag.value);
-if(w<=0)return;
-daten[aktuellesGeraet].eintraege.push({menge:w});
-neuerEintrag.value="";speichern();anzeigen();
+  if(!aktuellesGeraet)return;
+  let w=Number(neuerEintrag.value);
+  if(w<=0)return;
+  daten[aktuellesGeraet].eintraege.push({menge:w});
+  neuerEintrag.value="";speichern();anzeigen();
 }
 
 function anzeigen(){
-let t=daten[aktuellesGeraet].startsaldo;
-daten[aktuellesGeraet].eintraege.forEach(e=>t+=e.menge);
-total.innerText=t;
+  if(!aktuellesGeraet){total.innerText="0";return;}
+  let t=daten[aktuellesGeraet].startsaldo;
+  daten[aktuellesGeraet].eintraege.forEach(e=>t+=e.menge);
+  total.innerText=t;
 }
 
 function laufwechsel(){
-if(!aktuellesGeraet||!confirm("Neuen Lauf starten?"))return;
-daten[aktuellesGeraet]={startsaldo:0,eintraege:[]};
-startsaldo.value=0;speichern();anzeigen();
+  if(!aktuellesGeraet||!confirm("Neuen Lauf starten?"))return;
+  daten[aktuellesGeraet]={startsaldo:0,eintraege:[]};
+  startsaldo.value=0;speichern();anzeigen();
 }
 
 function geraetLoeschen(){
-if(!aktuellesGeraet||!confirm("Sportgerät löschen?"))return;
-delete daten[aktuellesGeraet];
-aktuellesGeraet="";speichern();ladeDropdown();total.innerText="0";
+  if(!aktuellesGeraet||!confirm("Sportgerät löschen?"))return;
+  delete daten[aktuellesGeraet];
+  aktuellesGeraet="";speichern();ladeDropdown();total.innerText="0";
 }
 
 function exportCSV(){
-if(!aktuellesGeraet)return;
-let csv="Menge\n";
-daten[aktuellesGeraet].eintraege.forEach(e=>csv+=e.menge+"\n");
-let a=document.createElement("a");
-a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-a.download="schussliste.csv";a.click();
+  if(!aktuellesGeraet)return;
+  let csv="Menge\n";
+  daten[aktuellesGeraet].eintraege.forEach(e=>csv+=e.menge+"\n");
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="schussliste.csv";a.click();
 }
 
 function exportJSON(){
-let a=document.createElement("a");
-a.href=URL.createObjectURL(new Blob([JSON.stringify(daten,null,2)],{type:"application/json"}));
-a.download="schusszaehler_backup.json";a.click();
+  const blob=new Blob([JSON.stringify(daten,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="schusszaehler_backup_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
 }
 
 function exportText(){
@@ -157,22 +159,28 @@ function exportText(){
   alert("Alles markieren, kopieren und z.B. in Notizen oder Drive einfügen.");
 }
 
+/* Import wie bei Resultate-App */
 function importJSON(){
-fileInput.click();
+  const i=document.createElement("input");
+  i.type="file"; 
+  i.accept=".json";
+  i.onchange=e=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const d=JSON.parse(r.result);
+        const merge=confirm("OK = Zusammenführen\nAbbrechen = Ersetzen");
+        daten = merge ? {...daten, ...d} : d;
+        speichern();ladeDropdown();
+        alert("Import erfolgreich!");
+      }catch{
+        alert("Ungültige Datei!");
+      }
+    };
+    r.readAsText(e.target.files[0]);
+  };
+  i.click();
 }
-
-fileInput.onchange=function(){
-let f=this.files[0];if(!f)return;
-let r=new FileReader();
-r.onload=e=>{
-try{
-daten=JSON.parse(e.target.result);
-speichern();ladeDropdown();
-alert("Import erfolgreich!");
-}catch{alert("Ungültige Datei!")}
-};
-r.readAsText(f);
-};
 
 window.onload=ladeDropdown;
 </script>
